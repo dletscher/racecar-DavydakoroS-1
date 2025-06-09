@@ -23,15 +23,30 @@ class Agent:
         else:
             steering = 'straight'
 
-        target = 0.1 + 0.2 * min(front, width)
-        target = min(target, 0.20)
+        base = 0.1 + 0.2 * min(front, width)
+
+        cap= 0.18
+        thresholds =[
+            (4, 4, 0.3, 0.35),
+            (5, 5, 0.25, 0.45),
+            (6, 6, 0.20, 0.55),
+            (8, 7, 0.15, 0.65),
+            (10, 8, 0.10, 0.75),
+        ]
+
+        for front_threshold, width_threshold, offset_threshold, new_cap in thresholds:
+            if front > front_threshold and width > width_threshold and abs(offset) < offset_threshold:
+                cap = new_cap
+
+        target = min(base, cap)
 
         if abs(curve_signal) > 0.3:
-            target = min(target, 0.2)
+            target = min(target, 0.25)
         if front < 0.5:
             target = min(target, 0.15)
         if abs(offset) > 0.7 or front < 0.3:
             target = min(target, 0.1)
+
 
         if velocity < target - 0.05:
             action = 'accelerate'
