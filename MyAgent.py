@@ -1,28 +1,43 @@
 import random
 
 class Agent:
-        def chooseAction(self, observations, possibleActions):
+    def chooseAction(self, observations, possibleActions):
+        lidar = observations['lidar']
+        velocity = observations['velocity']
+        left_far, left_near, front, right_near, right_far = lidar
 
-                lidar = observations['lidar']
-                velocity = observations['velocity']
 
 
-                left_avg = (lidar[0] + lidar[1]) / 2
-                right_avg = (lidar[3] + lidar[4]) / 2
-                center = lidar[2]
+        left = (left_far + left_near) / 2
+        right = (right_near + right_far) / 2
+        width = left + right
 
-                if left_avg < right_avg - 0.1:
-                        steering = 'right'
-                elif right_avg < left_avg - 0.1:
-                        steering = 'left'
-                else:
-                        steering = 'straight'
+        offset = (right - left) / max(width, 0.01)
+        curve_signal = (right_far + right_near - left_far - left_near) / max(left_far + left_near + right_far + right_near, 0.01)
 
-                if center < 0.6:
-                        action = 'brake'
-                elif velocity < 0.27:
-                        action = 'accelerate'
-                else:
-                        action = 'coast'
+        steer = 3.0 * offset + 1.5 * curve_signal
+        if steer > 0.05:
+            steering = 'right'
+        elif steer < -0.05:
+            steering = 'left'
+        else:
+            steering = 'straight'
 
-                return (steering, action)
+        target = 0.1 + 0.2 * min(front, width)
+        target = min(target, 0.20)
+
+        if abs(curve_signal) > 0.3:
+            target = min(target, 0.2)
+        if front < 0.5:
+            target = min(target, 0.15)
+        if abs(offset) > 0.7 or front < 0.3:
+            target = min(target, 0.1)
+
+        if velocity < target - 0.05:
+            action = 'accelerate'
+        elif velocity > target + 0.05:
+            action = 'brake'
+        else:
+            action = 'coast'
+
+        return (steering, action)
